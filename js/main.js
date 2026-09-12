@@ -5,7 +5,7 @@ import { SettingsPanel } from './settings.js';
 import { THEMES, FONTS } from './themes.js';
 import { FLAG_UNDERLINE } from './text.js';
 
-const STORAGE_KEY = 'crt.profile.v1';
+const STORAGE_KEY = 'crt.theme.v1';
 
 class App {
     constructor(canvas) {
@@ -100,28 +100,26 @@ class App {
         this.crt.setProfile(this.profile);
         document.body.style.setProperty('--phosphor', this.profile.fontColor);
         this.screen.dirty = true;
-        this.persist();
     }
 
     persist() {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                themeKey: this.themeKey,
-                profile: this.profile,
-                pixelScaleOverride: this.pixelScaleOverride,
-            }));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ themeKey: this.themeKey }));
         } catch { /* private browsing */ }
     }
 
     restore() {
+        let themeKey = 'amber';
         try {
             const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-            if (saved?.profile && THEMES[saved.themeKey]) {
-                this.themeKey = saved.themeKey;
-                this.profile = { ...THEMES[saved.themeKey], ...saved.profile };
-                this.pixelScaleOverride = saved.pixelScaleOverride ?? null;
-            }
-        } catch {}
+            if (saved && THEMES[saved.themeKey]) themeKey = saved.themeKey;
+        } catch { /* corrupted storage: fall back to the amber default */ }
+
+        this.themeKey = themeKey;
+        this.profile = { ...THEMES[themeKey] };
+        this.pixelScaleOverride = null;
+
+        this.applyProfile();
     }
 
     toggleSettings(open) {
