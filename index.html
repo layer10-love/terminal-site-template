@@ -14,11 +14,15 @@
 
 <canvas id="crt" aria-hidden="true"></canvas>
 
-<div id="loading">Loading...&hellip;</div>
+<div id="loading">Loading&hellip;</div>
 
 <div id="sr" role="log" aria-live="polite" aria-atomic="false"></div>
 
 <noscript>
+  <style>
+    html, body { overflow: auto; height: auto; }
+    #loading { display: none; }
+  </style>
   <div id="noscript">
     <h1>TODO: Name</h1>
     <p>This site renders itself on a simulated CRT, which needs JavaScript. Here is the short version instead:</p>

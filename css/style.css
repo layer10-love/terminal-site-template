@@ -211,6 +211,15 @@ html, body {
     white-space: pre-wrap;
 }
 #noscript a, #fallback a { color: inherit; }
+#noscript h1, #fallback h1 { margin: 0 0 1em; font-size: 1.6em; }
+#noscript h2, #fallback h2 {
+    margin: 1.8em 0 0.6em;
+    font-size: 1em;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.75;
+}
+#noscript p, #fallback p { margin: 0 0 1em; }
 
 body.no-webgl { overflow: auto; }
 body.no-webgl #crt, body.no-webgl #loading { display: none; }
