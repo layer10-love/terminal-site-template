@@ -69,6 +69,7 @@ class App {
 
         this.crt.resize(cssW, cssH, renderScale, this.pixelScale);
         this.applyProfile();
+        this.panel.sync();
         this.terminal.refreshPrompt();
     }
 
@@ -120,6 +121,7 @@ class App {
         this.pixelScaleOverride = null;
 
         this.applyProfile();
+        this.panel.sync();
     }
 
     toggleSettings(open) {
@@ -175,7 +177,6 @@ class App {
 
         document.addEventListener('visibilitychange', () => {
             this.running = !document.hidden;
-            if (this.running) this.loop(performance.now());
         });
     }
 
@@ -183,14 +184,18 @@ class App {
 
     start() {
         this.running = true;
-        this.startTime = performance.now();
+        this.simTime = 0;
+        this.lastFrame = null;
         this.lastBlink = 0;
         requestAnimationFrame((t) => this.loop(t));
     }
 
     loop(now) {
-        if (!this.running) return;
         requestAnimationFrame((t) => this.loop(t));
+        if (!this.running) return;
+        const dt = this.lastFrame === null ? 0 : Math.min((now - this.lastFrame) / 1000, 0.1);
+        this.lastFrame = now;
+        this.simTime += dt;
 
         // cursor blink
         if (now - this.lastBlink > 290) {
@@ -204,7 +209,7 @@ class App {
             this.crt.uploadText(this.screen.canvas);
         }
 
-        this.crt.render((now - this.startTime) / 1000);
+        this.crt.render(this.simTime);
     }
 }
 

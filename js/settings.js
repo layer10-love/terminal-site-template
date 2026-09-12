@@ -29,6 +29,11 @@ const RASTER_LABELS = [
     [RASTER.subpixels, 'Subpixels'],
 ];
 
+function setRange(input, value) {
+    input.value = String(value);
+    input.setAttribute('value', input.value);
+}
+
 export class SettingsPanel {
     constructor(app) {
         this.app = app;
@@ -61,13 +66,17 @@ export class SettingsPanel {
         tubeRow.className = 'row select-row';
         tubeRow.innerHTML = '<span>Tube</span>';
         this.tubeSelect = document.createElement('select');
+        this.tubeSelect.autocomplete = 'off';
         for (const key of THEME_ORDER) {
             const opt = document.createElement('option');
             opt.value = key;
             opt.textContent = THEMES[key].name;
             this.tubeSelect.appendChild(opt);
         }
-        this.tubeSelect.addEventListener('change', () => app.setTheme(this.tubeSelect.value));
+        this.tubeSelect.addEventListener('change', () => {
+            if (this.replayed()) return;
+            app.setTheme(this.tubeSelect.value);
+        });
         tubeRow.appendChild(this.tubeSelect);
         body.appendChild(tubeRow);
 
@@ -76,6 +85,7 @@ export class SettingsPanel {
         maskRow.className = 'row select-row';
         maskRow.innerHTML = '<span>Shadow mask</span>';
         this.maskSelect = document.createElement('select');
+        this.maskSelect.autocomplete = 'off';
         for (const [value, label] of RASTER_LABELS) {
             const opt = document.createElement('option');
             opt.value = String(value);
@@ -83,6 +93,7 @@ export class SettingsPanel {
             this.maskSelect.appendChild(opt);
         }
         this.maskSelect.addEventListener('change', () => {
+            if (this.replayed()) return;
             app.profile.rasterization = Number(this.maskSelect.value);
             app.applyProfile();
         });
@@ -94,8 +105,9 @@ export class SettingsPanel {
         sizeRow.className = 'row';
         sizeRow.innerHTML = '<span>Pixel size</span>';
         this.sizeInput = document.createElement('input');
-        Object.assign(this.sizeInput, { type: 'range', min: '1', max: '4', step: '0.5' });
+        Object.assign(this.sizeInput, { type: 'range', min: '1', max: '4', step: '0.5', autocomplete: 'off' });
         this.sizeInput.addEventListener('input', () => {
+            if (this.replayed()) return;
             app.pixelScaleOverride = Number(this.sizeInput.value);
             app.layout();
         });
@@ -114,8 +126,9 @@ export class SettingsPanel {
             row.className = 'row';
             row.innerHTML = `<span>${control.label}</span>`;
             const input = document.createElement('input');
-            Object.assign(input, { type: 'range', min: '0', max: '1', step: '0.01' });
+            Object.assign(input, { type: 'range', min: '0', max: '1', step: '0.01', autocomplete: 'off' });
             input.addEventListener('input', () => {
+                if (this.replayed()) return;
                 app.profile[control.key] = Number(input.value);
                 app.applyProfile();
             });
@@ -131,15 +144,25 @@ export class SettingsPanel {
         reset.addEventListener('click', () => app.setTheme(app.themeKey, { reset: true }));
         footer.appendChild(reset);
         this.el.appendChild(footer);
+        this.sync();
+    }
+
+    // The panel is hidden until the visitor opens it, so a control cannot be
+    // touched while it is. Anything arriving then is the browser replaying form
+    // state it saved for a reopened tab: put our own values back and ignore it.
+    replayed() {
+        if (!this.el.hidden) return false;
+        this.sync();
+        return true;
     }
 
     sync() {
         const p = this.app.profile;
         this.tubeSelect.value = this.app.themeKey;
         this.maskSelect.value = String(p.rasterization);
-        this.sizeInput.value = String(this.app.pixelScale);
+        setRange(this.sizeInput, this.app.pixelScale);
         for (const [key, input] of Object.entries(this.inputs)) {
-            input.value = String(p[key] ?? 0);
+            setRange(input, p[key] ?? 0);
         }
     }
 
