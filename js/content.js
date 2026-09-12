@@ -6,6 +6,7 @@
 export const SITE = {
     owner: 'Your Name',
     user: 'user',
+    banner: 'user',
     host: 'computer',
     tagline: 'one line about what you do',
     machine: 'uname',

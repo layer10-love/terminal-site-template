@@ -52,7 +52,7 @@ export function buildCommands(ctx) {
 
         banner: {
             help: 'print the masthead',
-            run: () => ['', ...banner(SITE.user, app.blockChar()).map((l) => `<b>${l}</b>`), ''],
+            run: () => ['', ...banner(SITE.banner, app.blockChar()).map((l) => `<b>${l}</b>`), ''],
         },
 
         theme: {

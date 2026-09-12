@@ -216,7 +216,7 @@ export class Terminal {
             this.screen.clear();
         }
 
-        for (const row of banner(SITE.user, this.app.blockChar())) {
+        for (const row of banner(SITE.banner, this.app.blockChar())) {
             this.printLine(`<b>${row}</b>`);
         }
         this.printLine('');
