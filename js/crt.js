@@ -314,8 +314,9 @@ export class CRT {
 
     screenToTexture(cssX, cssY) {
         const d = this.derived;
-        const u = cssX / this.cssWidth;
-        const v = cssY / this.cssHeight;
+        const rect = this.canvas.getBoundingClientRect();
+        const u = (cssX - rect.left) / (rect.width || this.cssWidth);
+        const v = (cssY - rect.top) / (rect.height || this.cssHeight);
         if (!d) return [u, v];
         const px = u * (1 + d.frameSize * 2) - d.frameSize;
         const py = v * (1 + d.frameSize * 2) - d.frameSize;

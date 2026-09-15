@@ -46,9 +46,13 @@ class App {
         return Math.min(4, Math.max(1, Math.round(scale * 2) / 2));
     }
 
+    viewport() {
+        const rect = this.canvas.getBoundingClientRect();
+        return [rect.width || window.innerWidth, rect.height || window.innerHeight];
+    }
+
     layout() {
-        const cssW = window.innerWidth;
-        const cssH = window.innerHeight;
+        const [cssW, cssH] = this.viewport();
 
         let renderScale = Math.min(3, Math.max(2, window.devicePixelRatio || 1));
         const budget = 5.5e6;
@@ -83,9 +87,10 @@ class App {
         this.pixelScaleOverride = reset ? null : this.pixelScaleOverride;
         if (fontChanged || reset) this.layout();
         else {
+            const [cssW, cssH] = this.viewport();
             this.screen.setMetrics({
-                cssWidth: window.innerWidth,
-                cssHeight: window.innerHeight,
+                cssWidth: cssW,
+                cssHeight: cssH,
                 dpr: this.crt.dpr,
                 pixelScale: this.pixelScale,
                 fontKey: this.profile.font,
