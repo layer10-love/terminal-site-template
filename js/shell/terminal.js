@@ -1,8 +1,9 @@
-import { parseMarkup, runsLength } from './text.js';
-import { COLOR } from './themes.js';
-import { SITE, BOOT, GREETING } from './content.js';
+import { parseMarkup, runsLength } from '../display/text.js';
+import { COLOR } from '../display/themes.js';
+import { SITE, BOOT, GREETING } from '../content/content.js';
 import { buildCommands, lookup, resolvePath } from './commands.js';
-import { banner } from './banner.js';
+import { banner } from '../display/banner.js';
+import { BLOG_ROUTE, isBlogPath } from '../blog/route.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -15,6 +16,7 @@ export class Terminal {
         this.historyIndex = 0;
         this.busy = false;
         this.skipRequested = false;
+        this.pager = null;
         this.commands = buildCommands({ term: this, app });
 
         this.input = this.createInput();
@@ -45,6 +47,7 @@ export class Terminal {
     }
 
     refreshPrompt() {
+        if (this.pager) { this.pager.refresh(); return; }
         if (this.busy) { this.screen.setActive(null, 0); return; }
         const prompt = this.promptRuns();
         const typed = this.input.value;
@@ -52,6 +55,35 @@ export class Terminal {
         if (typed) runs.push({ text: typed, color: COLOR.bright, flags: 0, link: null });
         this.screen.setActive(runs, runsLength(prompt) + (this.input.selectionStart ?? typed.length));
         this.screen.scrollToBottom();
+    }
+
+    // full-screen programs: the pager gets the screen and every keystroke until it closes itself
+    openPager(pager) {
+        this.pager = pager;
+        this.screen.setView(pager);
+    }
+
+    closePager() {
+        this.pager = null;
+        this.screen.setView(null);
+        this.refreshPrompt();
+    }
+
+    // Follows the address bar: /blog opens the post list, /blog/<post> opens that post, anything else is the console.
+    async route() {
+        const path = location.pathname.replace(/\/+$/, '');
+        if (this.pager) this.closePager();
+        if (!isBlogPath(path)) return;
+
+        let name = path.slice(BLOG_ROUTE.length + 1);
+        try { name = decodeURIComponent(name); } catch { /* malformed escape: look it up as typed */ }
+        const out = this.commands.blog ? this.commands.blog.run(name ? [name] : []) : [];
+        if (this.pager) return;
+
+        // no such post: don't leave an address that claims otherwise
+        history.replaceState(null, '', '/');
+        await this.typeLines(out);
+        this.refreshPrompt();
     }
 
     printLine(markup) {
@@ -162,6 +194,7 @@ export class Terminal {
 
     bindKeys() {
         this.input.addEventListener('keydown', (e) => {
+            if (this.pager) { this.pager.onKey(e); return; }
             if (e.key === 'Enter') {
                 e.preventDefault();
                 if (!this.busy) this.submit();

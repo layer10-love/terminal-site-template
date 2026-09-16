@@ -1,4 +1,4 @@
-import { THEMES, THEME_ORDER, RASTER } from './themes.js';
+import { THEMES, THEME_ORDER, RASTER } from '../display/themes.js';
 
 const CONTROLS = [
     { group: 'Tube' },

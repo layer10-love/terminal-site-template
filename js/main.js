@@ -1,9 +1,10 @@
-import { CRT } from './crt.js';
-import { Screen } from './screen.js';
-import { Terminal } from './terminal.js';
-import { SettingsPanel } from './settings.js';
-import { THEMES, FONTS } from './themes.js';
-import { FLAG_UNDERLINE } from './text.js';
+import { CRT } from './crt/crt.js';
+import { Screen } from './display/screen.js';
+import { Terminal } from './shell/terminal.js';
+import { SettingsPanel } from './crt/settings.js';
+import { THEMES, FONTS } from './display/themes.js';
+import { FLAG_UNDERLINE } from './display/text.js';
+import { isBlogPath } from './blog/route.js';
 
 const STORAGE_KEY = 'crt.theme.v1';
 
@@ -150,7 +151,8 @@ class App {
 
         this.canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
-            this.screen.scrollBy(Math.sign(e.deltaY) * -3);
+            if (this.terminal.pager) this.terminal.pager.scroll(Math.sign(e.deltaY) * 3);
+            else this.screen.scrollBy(Math.sign(e.deltaY) * -3);
         }, { passive: false });
 
         // we just send the cursor through the same barrel distort as the text
@@ -161,11 +163,16 @@ class App {
 
         this.canvas.addEventListener('mousemove', (e) => {
             const run = runUnder(e);
-            this.canvas.style.cursor = run?.link ? 'pointer' : 'default';
+            this.canvas.style.cursor = run?.link || run?.action ? 'pointer' : 'default';
         });
 
         this.canvas.addEventListener('click', (e) => {
             const run = runUnder(e);
+            if (run?.action) {
+                run.action();
+                this.terminal.focus();
+                return;
+            }
             if (run?.link) {
                 window.open(run.link, run.link.startsWith('mailto:') ? '_self' : '_blank', 'noopener');
                 return;
@@ -183,6 +190,8 @@ class App {
         document.addEventListener('visibilitychange', () => {
             this.running = !document.hidden;
         });
+
+        window.addEventListener('popstate', () => this.terminal.route());
     }
 
     // main loop
@@ -253,13 +262,18 @@ async function main() {
     app.layout();
     app.start();
 
-    const skipBoot = new URLSearchParams(location.search).has('fast')
+    // someone following a link to a post came for the post: no boot sequence, no typing delay
+    const linked = isBlogPath(location.pathname);
+    const skipBoot = linked
+        || new URLSearchParams(location.search).has('fast')
         || sessionStorage.getItem('booted') === '1';
     try { sessionStorage.setItem('booted', '1'); } catch {}
 
     document.getElementById('loading')?.remove();
     app.terminal.focus();
+    if (linked) app.terminal.skipRequested = true;
     await app.terminal.boot({ skipBoot });
+    if (linked) await app.terminal.route();
 }
 
 main();

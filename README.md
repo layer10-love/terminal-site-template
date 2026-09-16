@@ -17,9 +17,11 @@ append `?fast` to the URL to skip the boot sequence while you are editing the si
 
 Edit the following files to your liking:
 
-- `js/content.js`: your name, the boot messages, the pages, and the virtual filesystem that `ls` / `cat` walk around
+- `js/content/content.js`: your name, the boot messages, the pages, and the virtual filesystem that `ls` / `cat` walk around
 - `index.html` - the `<title>`, the description meta, and the `<noscript>` block (which is what search engines and visitors with NoScript read)
-- `js/themes.js` - if you want to change which theme is the default, or add/remove stuff from the list
+- `js/display/themes.js` - if you want to change which theme is the default, or add/remove stuff from the list
+- `js/content/blog.js` and `posts/` - the posts the `blog` command opens in the pager. They understand a markdown subset: `# heading`, `-` and `1.` lists, `---` rules, plus the color/link markup. Empty the list to remove the command.
+  Each post gets its own address, `/blog/<title>`. To make those links work on a fresh load, your server has to answer `/blog` and `/blog/*` with `index.html` (`python3 -m http.server` doesn't, so there they only work within a visit)
 
 You can use the following markup in any line:
 
@@ -34,16 +36,24 @@ In monochrome themes, colors are displayed as a series of brightness steps inste
 
 ## How it works:
 
-| File             |                                                            |
-| ---------------- | ---------------------------------------------------------- |
-| `js/shaders.js`  | the GLSL, ported from cool-retro-term                      |
-| `js/crt.js`      | the render pipeline and the profile → uniform derivations  |
-| `js/gl.js`       | small WebGL2 helpers (programs, render targets, ping-pong) |
-| `js/screen.js`   | the text grid                                              |
-| `js/text.js`     | markup parsing and line wrapping                           |
-| `js/terminal.js` | everything pertaining to the 'shell'                       |
-| `js/commands.js` | what each command does                                     |
-| `js/themes.js`   | display profiles and the cell palette                      |
+| File                    |                                                            |
+| ----------------------- | ---------------------------------------------------------- |
+| `js/main.js`            | the entry point, wires everything together                 |
+| `js/content/content.js` | the site's content (see above)                             |
+| `js/content/blog.js`    | the post list (see above)                                  |
+| `js/crt/shaders.js`     | the GLSL, ported from cool-retro-term                      |
+| `js/crt/crt.js`         | the render pipeline and the profile → uniform derivations  |
+| `js/crt/gl.js`          | small WebGL2 helpers (programs, render targets, ping-pong) |
+| `js/crt/settings.js`    | the `crt` effects-sliders panel                            |
+| `js/display/screen.js`  | the text grid                                              |
+| `js/display/text.js`    | markup parsing and line wrapping                           |
+| `js/display/themes.js`  | display profiles and the cell palette                      |
+| `js/display/banner.js`  | the block-letter banner font                               |
+| `js/shell/terminal.js`  | everything pertaining to the 'shell'                       |
+| `js/shell/commands.js`  | what each command does                                     |
+| `js/blog/pager.js`      | the full-screen blog reader                                |
+| `js/blog/markdown.js`   | the markdown subset blog posts are rendered with           |
+| `js/blog/route.js`      | the `/blog/<title>` addresses                              |
 
 The page renders above CSS resolution on purpose.
 The scanline mask fades itself out below 2x sampling to avoid moiré,
@@ -60,8 +70,8 @@ Visitors without WebGL2 or JS will see plain text.
 ## Credits and Licensing
 
 **The shaders are a port of [cool-retro-term](https://github.com/Swordfish90/cool-retro-term)
-by Filippo Scognamiglio, which is GPLv3.** `js/shaders.js` and the derivations in
-`js/crt.js` are derivative work, so this project is licensed **GPLv3** as a
+by Filippo Scognamiglio, which is GPLv3.** `js/crt/shaders.js` and the derivations in
+`js/crt/crt.js` are derivative work, so this project is licensed **GPLv3** as a
 whole (see `LICENSE`).
 
 Fonts, all bundled under `assets/fonts` with their licenses:

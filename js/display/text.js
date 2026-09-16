@@ -57,20 +57,22 @@ export function runsLength(runs) {
     return n;
 }
 
-export function wrapRuns(runs, cols) {
+/* Continuation rows are indented like the first row's leading spaces, or by `hang` cells when it is given
+ * (list items hang past their bullet). */
+export function wrapRuns(runs, cols, hang) {
     if (cols < 1) return [[]];
     const rows = [];
     let row = [];
     let used = 0;
 
     const firstText = runs.length ? runs[0].text : '';
-    const indent = Math.min(cols - 8, (firstText.match(/^ */) || [''])[0].length);
-    const hang = indent > 0 ? ' '.repeat(indent) : '';
+    const indent = Math.min(cols - 8, hang ?? (firstText.match(/^ */) || [''])[0].length);
+    const pad = indent > 0 ? ' '.repeat(indent) : '';
 
     const pushRow = () => {
         rows.push(row);
-        row = hang ? [{ text: hang, color: 7, flags: 0, link: null }] : [];
-        used = hang.length;
+        row = pad ? [{ text: pad, color: 7, flags: 0, link: null }] : [];
+        used = pad.length;
     };
 
     for (const run of runs) {
@@ -85,10 +87,10 @@ export function wrapRuns(runs, cols) {
                 used += text.length;
                 break;
             }
-            // Prefer to break at the last space that fits.
+            // Prefer to break at the last space that fits; a space at 0 breaks right before this run.
             let cut = text.lastIndexOf(' ', space);
-            if (cut <= 0) cut = space;
-            row.push({ ...run, text: text.slice(0, cut) });
+            if (cut < 0 || (cut === 0 && used <= pad.length)) cut = space;
+            if (cut > 0) row.push({ ...run, text: text.slice(0, cut) });
             text = text.slice(cut).replace(/^ /, '');
             pushRow();
         }

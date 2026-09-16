@@ -1,6 +1,8 @@
-import { SITE, FS, PAGES, CRT_LOGO, CRT_LOGO_ASCII } from './content.js';
-import { THEMES, THEME_ORDER } from './themes.js';
-import { banner } from './banner.js';
+import { SITE, FS, PAGES, CRT_LOGO, CRT_LOGO_ASCII } from '../content/content.js';
+import { THEMES, THEME_ORDER } from '../display/themes.js';
+import { banner } from '../display/banner.js';
+import { BLOG } from '../content/blog.js';
+import { Pager } from '../blog/pager.js';
 
 // virtual filesystem navigation
 
@@ -79,6 +81,23 @@ export function buildCommands(ctx) {
             crt: {
                 help: 'open the effects panel',
                 run: () => { app.toggleSettings(true); return ['<d>Effects panel open. Esc to close.</d>']; },
+            },
+        } : {}),
+
+        ...(BLOG.length ? {
+            blog: {
+                help: 'read the blog',
+                complete: () => BLOG.map((p) => p.title),
+                run: (args) => {
+                    let start = 0;
+                    if (args[0]) {
+                        start = BLOG.findIndex((p) => p.title === args[0]);
+                        if (start < 0) return [`<r>blog: no such post: ${args[0]}</r>`, '<d>Run `blog` to browse them.</d>'];
+                    }
+                    // naming a post goes straight to reading it; otherwise start in the post list
+                    term.openPager(new Pager(term, BLOG, { start, sidebar: !args[0] }));
+                    return [];
+                },
             },
         } : {}),
 

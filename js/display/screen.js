@@ -12,6 +12,8 @@ export class Screen {
         this.cursorVisible = true;
         this.scrollOffset = 0;
         this.maxLines = 4000;
+        // A full-screen program (the pager) can take over drawing; the scrollback stays untouched underneath.
+        this.view = null;
 
         this.cols = 80;
         this.rows = 25;
@@ -90,6 +92,12 @@ export class Screen {
         this.invalidate();
     }
 
+    setView(view) {
+        this.view = view;
+        this._viewRows = null;
+        this.dirty = true;
+    }
+
     invalidate() {
         this._committedRows = null;
         this._wrapCache = null;
@@ -145,7 +153,7 @@ export class Screen {
 
     render() {
         const ctx = this.ctx;
-        const { rows, cursor } = this.layout();
+        const { rows, cursor } = this.view ? this.view.frame(this.cols, this.rows) : this.layout();
 
         ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
         ctx.fillStyle = '#000000';
@@ -155,9 +163,10 @@ export class Screen {
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
 
-        const top = this.viewTop();
+        const top = this.view ? 0 : this.viewTop();
         const end = Math.min(rows.length, top + this.rows);
         this._visibleTop = top;
+        this._viewRows = this.view ? rows : null;
 
         for (let i = top; i < end; i++) {
             const y = this.originY + (i - top) * this.cellH;
@@ -174,7 +183,8 @@ export class Screen {
                     continue;
                 }
 
-                const w = run.text.length * this.cellW;
+                const scale = run.scale || 1;
+                const w = run.text.length * scale * this.cellW;
 
                 if (run.flags & FLAG_INVERSE) {
                     ctx.fillStyle = PALETTE[run.color];
@@ -183,17 +193,30 @@ export class Screen {
                 } else {
                     ctx.fillStyle = PALETTE[run.color];
                 }
-                ctx.fillText(run.text, x, ty);
 
-                if (run.flags & FLAG_UNDERLINE) {
+                if (scale === 2) {
+                    // Double-size text spans two rows: draw it twice as big and let each row show only its half.
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(x, y, w, this.cellH);
+                    ctx.clip();
+                    ctx.translate(x, run.half === 'bottom' ? y - this.cellH : y);
+                    ctx.scale(2, 2);
+                    ctx.fillText(run.text, 0, this.glyphOffsetY);
+                    ctx.restore();
+                } else {
+                    ctx.fillText(run.text, x, ty);
+                }
+
+                if (run.flags & FLAG_UNDERLINE && run.half !== 'top') {
                     const uy = Math.round(y + this.cellH - Math.max(1, this.cellH * 0.09));
                     ctx.fillRect(x, uy, w, Math.max(1, Math.round(this.cellH * 0.055)));
                 }
-                col += run.text.length;
+                col += run.text.length * scale;
             }
         }
 
-        if (cursor && this.cursorVisible && this.scrollOffset === 0) {
+        if (cursor && this.cursorVisible && (this.view || this.scrollOffset === 0)) {
             const cy = this.originY + (cursor.row - top) * this.cellH;
             if (cursor.row >= top && cursor.row < end) {
                 ctx.fillStyle = PALETTE[COLOR.bright];
@@ -201,7 +224,7 @@ export class Screen {
             }
         }
 
-        if (this.scrollOffset > 0) {
+        if (!this.view && this.scrollOffset > 0) {
             ctx.fillStyle = PALETTE[COLOR.dim];
             const label = `-- ${this.scrollOffset} more below --`;
             ctx.fillText(label, this.originX + (this.cols - label.length) * this.cellW,
@@ -219,14 +242,15 @@ export class Screen {
         const rowOnScreen = Math.floor(y / this.cellH);
         if (col < 0 || col >= this.cols || rowOnScreen < 0 || rowOnScreen >= this.rows) return null;
 
-        const { rows } = this.layout();
+        const rows = this.view ? (this._viewRows ?? []) : this.layout().rows;
         const row = rows[(this._visibleTop ?? this.viewTop()) + rowOnScreen];
         if (!row) return null;
 
         let c = 0;
         for (const run of row) {
-            if (col >= c && col < c + run.text.length) return run;
-            c += run.text.length;
+            const w = run.text.length * (run.scale || 1);
+            if (col >= c && col < c + w) return run;
+            c += w;
         }
         return null;
     }

@@ -156,6 +156,7 @@ const HELP = [
     '  <b>skills</b>      what I work in',
     '  <b>contact</b>     how to reach me',
     '  <b>colophon</b>    licensing and sources',
+    '  <b>blog</b>        read the blog',
     '',
     '  <b>theme</b> [name]  change the theme of the screen. <d>theme</d> alone lists them',
     ...(SITE.settingsPanel !== false ? ['  <b>crt</b>         open the effects panel'] : []),
