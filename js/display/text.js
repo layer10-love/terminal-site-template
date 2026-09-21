@@ -98,3 +98,20 @@ export function wrapRuns(runs, cols, hang) {
     rows.push(row);
     return rows;
 }
+
+export function rowCells(runs, cols) {
+    const cells = new Array(cols).fill(' ');
+    let col = 0;
+    for (const run of runs) {
+        if (run.rule) break;
+        const scale = run.scale || 1;
+        for (let i = 0; i < run.text.length; i++) {
+            const c = col + i * scale;
+            if (c >= cols) break;
+            cells[c] = run.half === 'bottom' ? '' : run.text[i];
+            if (scale === 2 && c + 1 < cols) cells[c + 1] = '';
+        }
+        col += run.text.length * scale;
+    }
+    return cells;
+}

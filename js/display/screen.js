@@ -1,5 +1,5 @@
 import { PALETTE, FONTS, COLOR } from './themes.js';
-import { wrapRuns, runsLength, FLAG_INVERSE, FLAG_UNDERLINE } from './text.js';
+import { wrapRuns, runsLength, rowCells, FLAG_INVERSE, FLAG_UNDERLINE } from './text.js';
 
 export class Screen {
     constructor() {
@@ -14,6 +14,8 @@ export class Screen {
         this.maxLines = 4000;
         // A full-screen program (the pager) can take over drawing; the scrollback stays untouched underneath.
         this.view = null;
+        this.sel = null;
+        this.notice = null;
 
         this.cols = 80;
         this.rows = 25;
@@ -58,11 +60,13 @@ export class Screen {
 
         this._committedRows = null;
         this._wrapCache = null;
+        this.sel = null;
         this.dirty = true;
     }
 
     clear() {
         this.lines = [];
+        this.sel = null;
         this.scrollOffset = 0;
         this.invalidate();
     }
@@ -72,6 +76,7 @@ export class Screen {
         if (this.lines.length > this.maxLines) {
             this.lines.splice(0, this.lines.length - this.maxLines);
             this._committedRows = null;
+            this.sel = null;
         } else if (this._committedRows) {
             for (const r of wrapRuns(runs, this.cols)) this._committedRows.push(r);
         }
@@ -95,6 +100,7 @@ export class Screen {
     setView(view) {
         this.view = view;
         this._viewRows = null;
+        this.sel = null;
         this.dirty = true;
     }
 
@@ -167,8 +173,10 @@ export class Screen {
         const end = Math.min(rows.length, top + this.rows);
         this._visibleTop = top;
         this._viewRows = this.view ? rows : null;
+        const sel = this._orderedSelection();
 
         for (let i = top; i < end; i++) {
+            const span = sel && i >= sel.a.row && i <= sel.b.row ? this._selectedSpan(sel, i) : null;
             const y = this.originY + (i - top) * this.cellH;
             const ty = y + this.glyphOffsetY;
             let col = 0;
@@ -194,18 +202,25 @@ export class Screen {
                     ctx.fillStyle = PALETTE[run.color];
                 }
 
-                if (scale === 2) {
-                    // Double-size text spans two rows: draw it twice as big and let each row show only its half.
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.rect(x, y, w, this.cellH);
-                    ctx.clip();
-                    ctx.translate(x, run.half === 'bottom' ? y - this.cellH : y);
-                    ctx.scale(2, 2);
-                    ctx.fillText(run.text, 0, this.glyphOffsetY);
-                    ctx.restore();
-                } else {
-                    ctx.fillText(run.text, x, ty);
+                this._drawText(run, x, y, ty, w);
+
+                if (span) {
+                    const from = Math.max(span[0], col);
+                    const to = Math.min(span[1] + 1, col + run.text.length * scale);
+                    if (from < to) {
+                        // Selected cells swap foreground and background, same as an inverse run.
+                        const inverse = run.flags & FLAG_INVERSE;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(x + (from - col) * this.cellW, y, (to - from) * this.cellW, this.cellH);
+                        ctx.clip();
+                        ctx.fillStyle = inverse ? '#000000' : PALETTE[run.color];
+                        ctx.fillRect(x, y, w, this.cellH);
+                        ctx.fillStyle = inverse ? PALETTE[run.color] : '#000000';
+                        this._drawText(run, x, y, ty, w);
+                        ctx.restore();
+                        ctx.fillStyle = inverse ? '#000000' : PALETTE[run.color];
+                    }
                 }
 
                 if (run.flags & FLAG_UNDERLINE && run.half !== 'top') {
@@ -231,7 +246,32 @@ export class Screen {
                 this.originY + (this.rows - 1) * this.cellH);
         }
 
+        if (this.notice) {
+            const label = ` ${this.notice} `;
+            const nx = this.originX + (this.cols - label.length) * this.cellW;
+            ctx.fillStyle = PALETTE[COLOR.bright];
+            ctx.fillRect(nx, this.originY, label.length * this.cellW, this.cellH);
+            ctx.fillStyle = '#000000';
+            ctx.fillText(label, nx, this.originY + this.glyphOffsetY);
+        }
+
         this.dirty = false;
+    }
+
+    _drawText(run, x, y, ty, w) {
+        const ctx = this.ctx;
+        if ((run.scale || 1) === 2) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x, y, w, this.cellH);
+            ctx.clip();
+            ctx.translate(x, run.half === 'bottom' ? y - this.cellH : y);
+            ctx.scale(2, 2);
+            ctx.fillText(run.text, 0, this.glyphOffsetY);
+            ctx.restore();
+        } else {
+            ctx.fillText(run.text, x, ty);
+        }
     }
 
     runAt(u, v) {
@@ -253,5 +293,82 @@ export class Screen {
             c += w;
         }
         return null;
+    }
+
+    // selection
+
+    _rows() {
+        return this.view ? (this._viewRows ?? []) : this.layout().rows;
+    }
+
+    cellAt(u, v) {
+        const rows = this._rows();
+        if (rows.length === 0) return null;
+        const x = u * this.cssWidth - this.originX;
+        const y = v * this.cssHeight - this.originY;
+        const over = y < 0 ? -1 : y >= this.rows * this.cellH ? 1 : 0;
+        const top = this.view ? 0 : this.viewTop();
+        let col = Math.min(this.cols - 1, Math.max(0, Math.floor(x / this.cellW)));
+        let row = top + Math.min(this.rows - 1, Math.max(0, Math.floor(y / this.cellH)));
+        if (row > rows.length - 1) { row = rows.length - 1; col = this.cols - 1; }
+        return { row, col, over };
+    }
+
+    setSelection(a, b) {
+        this.sel = { a: { row: a.row, col: a.col }, b: { row: b.row, col: b.col } };
+        this.dirty = true;
+    }
+
+    clearSelection() {
+        if (!this.sel) return;
+        this.sel = null;
+        this.dirty = true;
+    }
+
+    hasSelection() { return this.sel !== null; }
+
+    _orderedSelection() {
+        if (!this.sel) return null;
+        const { a, b } = this.sel;
+        const flip = a.row > b.row || (a.row === b.row && a.col > b.col);
+        return flip ? { a: b, b: a } : { a, b };
+    }
+
+    // inclusive column range of `row` covered by the selection
+    _selectedSpan(sel, row) {
+        return [row === sel.a.row ? sel.a.col : 0, row === sel.b.row ? sel.b.col : this.cols - 1];
+    }
+
+    // the run of non-space cells around a cell, or null when it sits on a space
+    wordAt({ row, col }) {
+        const line = this._rows()[row];
+        if (!line) return null;
+        const cells = rowCells(line, this.cols);
+        if (cells[col] === ' ') return null;
+        let from = col, to = col;
+        while (from > 0 && cells[from - 1] !== ' ') from--;
+        while (to < this.cols - 1 && cells[to + 1] !== ' ') to++;
+        return { a: { row, col: from }, b: { row, col: to } };
+    }
+
+    selectedText() {
+        const sel = this._orderedSelection();
+        if (!sel) return '';
+        const rows = this._rows();
+        const out = [];
+        for (let r = sel.a.row; r <= sel.b.row; r++) {
+            const line = rows[r];
+            if (!line || line.some((run) => run.half === 'bottom')) continue;
+            const [from, to] = this._selectedSpan(sel, r);
+            out.push(rowCells(line, this.cols).slice(from, to + 1).join('').trimEnd());
+        }
+        return out.join('\n');
+    }
+
+    flash(message, ms = 1400) {
+        this.notice = message;
+        this.dirty = true;
+        clearTimeout(this._noticeTimer);
+        this._noticeTimer = setTimeout(() => { this.notice = null; this.dirty = true; }, ms);
     }
 }

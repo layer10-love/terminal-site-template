@@ -5,6 +5,7 @@ import { SettingsPanel } from './crt/settings.js';
 import { THEMES, FONTS } from './display/themes.js';
 import { FLAG_UNDERLINE } from './display/text.js';
 import { isBlogPath } from './blog/route.js';
+import { bindSelection } from './display/selection.js';
 
 const STORAGE_KEY = 'crt.theme.v1';
 
@@ -166,7 +167,10 @@ class App {
             this.canvas.style.cursor = run?.link || run?.action ? 'pointer' : 'default';
         });
 
+        const selection = bindSelection(this);
+
         this.canvas.addEventListener('click', (e) => {
+            if (selection.consumeClick()) return;
             const run = runUnder(e);
             if (run?.action) {
                 run.action();
