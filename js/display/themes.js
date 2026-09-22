@@ -34,6 +34,7 @@ const profile = (name, overrides) => ({
     screenCurvature: 0.2,
     staticNoise: 0.04,
     frameSize: 0,
+    sizeScale: 1,
     ...overrides,
 });
 

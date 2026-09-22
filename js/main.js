@@ -45,7 +45,9 @@ class App {
         const nativeW = (FONTS[this.profile.font] || FONTS.vga).cell[0];
         const targetCols = cssW < 700 ? 42 : cssW < 1100 ? 64 : 80;
         const scale = (cssW * 0.9) / (targetCols * nativeW);
-        return Math.min(4, Math.max(1, Math.round(scale * 2) / 2));
+        const snapped = Math.min(4, Math.max(1, Math.round(scale * 2) / 2));
+        // Applied after snapping so small factors aren't rounded away
+        return Math.max(1, snapped * (this.profile.sizeScale || 1));
     }
 
     viewport() {
