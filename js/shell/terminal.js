@@ -277,11 +277,12 @@ export class Terminal {
     async memoryCount() {
         const total = 640;
         this.printLine('');
+        const width = String(total).length;
         for (let kb = 0; kb <= total; kb += 64) {
-            this.screen.replaceLast(parseMarkup(`  <b>${String(kb).padStart(5)}</b> KB OK`));
+            this.screen.replaceLast(parseMarkup(`[      ]  <b>${String(kb).padStart(width)}</b> KB`));
             if (this.skipRequested) break;
             await sleep(28);
         }
-        this.screen.replaceLast(parseMarkup(`  <b>${total}</b> KB OK                    <g>[ OK ]</g>`));
+        this.screen.replaceLast(parseMarkup(`[  <g>OK</g>  ]  <b>${total}</b> KB`));
     }
 }
