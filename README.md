@@ -29,7 +29,11 @@ You can use the following markup in any line:
 <b>bright</b>  <d>dim</d>  <inv>inverse</inv>
 <y>yellow</y> <g>green</g> <c>cyan</c> <r>red</r> <m>magenta</m> <u>blue</u>
 <a href="https://example.com">a clickable link</a>
+<cmd>help</cmd>  <cmd run="theme amber">a command</cmd>
 ```
+
+A `<cmd>` runs its text as a command when clicked or tapped, or the `run="..."` it was given,
+so visitors on a phone can get around without typing.
 
 Colors only appear on the chroma profiles (default themes: `dos`, `neon`, `deepblue`, `flat`).
 In monochrome themes, colors are displayed as a series of brightness steps instead.

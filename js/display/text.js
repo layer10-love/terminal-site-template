@@ -14,19 +14,23 @@ export function parseMarkup(str, baseColor = COLOR.normal) {
     const colorStack = [baseColor];
     let flags = 0;
     let link = null;
+    // a <cmd> runs its own text when tapped, or the run="..." it was given
+    let command = null;
+    let cmdStart = 0;
     let buf = '';
 
     const flush = () => {
         if (!buf) return;
-        runs.push({ text: buf, color: colorStack[colorStack.length - 1], flags, link });
+        runs.push({ text: buf, color: colorStack[colorStack.length - 1], flags, link, command });
         buf = '';
     };
 
-    const re = /<(\/?)(a|inv|hr|[bdygcrmukw])(?:\s+href="([^"]*)")?>/g;
+    const re = /<(\/?)(a|cmd|inv|hr|[bdygcrmukw])(?:\s+(href|run)="([^"]*)")?>/g;
     let last = 0, m;
     while ((m = re.exec(str)) !== null) {
-        const [full, closing, tag, href] = m;
-        if (tag === 'a' && !closing && href === undefined) continue; // not our tag
+        const [full, closing, tag, attr, value] = m;
+        // not our tag
+        if (!closing && ((tag === 'a') !== (attr === 'href') || (attr === 'run' && tag !== 'cmd'))) continue;
         buf += str.slice(last, m.index);
         last = m.index + full.length;
         flush();
@@ -38,10 +42,19 @@ export function parseMarkup(str, baseColor = COLOR.normal) {
 
         if (closing) {
             if (tag === 'a') { link = null; flags &= ~FLAG_UNDERLINE; }
-            else if (tag === 'inv') flags &= ~FLAG_INVERSE;
+            else if (tag === 'cmd') {
+                if (command === '') {
+                    const own = runs.slice(cmdStart);
+                    const text = own.map((r) => r.text).join('').trim();
+                    for (const r of own) r.command = text;
+                }
+                command = null;
+                flags &= ~FLAG_UNDERLINE;
+            } else if (tag === 'inv') flags &= ~FLAG_INVERSE;
             else if (colorStack.length > 1) colorStack.pop();
         } else {
-            if (tag === 'a') { link = href; flags |= FLAG_UNDERLINE; }
+            if (tag === 'a') { link = value; flags |= FLAG_UNDERLINE; }
+            else if (tag === 'cmd') { command = value ?? ''; cmdStart = runs.length; flags |= FLAG_UNDERLINE; }
             else if (tag === 'inv') flags |= FLAG_INVERSE;
             else colorStack.push(TAGS[tag]);
         }

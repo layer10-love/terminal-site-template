@@ -126,6 +126,18 @@ export class Terminal {
         this.refreshPrompt();
     }
 
+    async runTapped(line) {
+        if (this.busy) { this.skipRequested = true; return; }
+        if (this.pager) this.pager.close();
+        const typed = this.input.value;
+        this.input.value = line;
+        await this.submit();
+        if (typed && !this.input.value) {
+            this.input.value = typed;
+            this.refreshPrompt();
+        }
+    }
+
     async run(line) {
         const [name, ...args] = line.split(/\s+/);
         const cmd = this.commands[name.toLowerCase()];
@@ -136,7 +148,7 @@ export class Terminal {
             if (!cmd) {
                 await this.typeLines([
                     `<r>${name}: command not found</r>`,
-                    '<d>Type <b>help</b> for the list.</d>',
+                    '<d>Type <b><cmd>help</cmd></b> for the list.</d>',
                 ]);
             } else {
                 const out = await cmd.run(args);

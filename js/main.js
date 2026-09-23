@@ -193,8 +193,12 @@ class App {
 
         this.canvas.addEventListener('mousemove', (e) => {
             const run = runUnder(e);
-            this.canvas.style.cursor = run?.link || run?.action ? 'pointer' : 'default';
+            this.canvas.style.cursor = run?.link || run?.action || run?.command ? 'pointer' : 'default';
         });
+
+        // Safari's click is not a PointerEvent, so remember what the last press was made with
+        let pointerType = 'mouse';
+        this.canvas.addEventListener('pointerdown', (e) => { pointerType = e.pointerType; });
 
         const selection = bindSelection(this);
         const touchScroll = bindTouchScroll(this);
@@ -204,17 +208,27 @@ class App {
             const afterSelect = selection.consumeClick();
             const afterScroll = touchScroll.consumeClick();
             if (afterSelect || afterScroll) return;
-            const run = runUnder(e);
+            // On touch the keyboard covers half the screen, so a tap only raises it on the prompt line
+            // and lowers it anywhere else; tapping commands and actions leaves it as it is.
+            const touch = pointerType === 'touch';
+            const [u, v] = this.crt.screenToTexture(e.clientX, e.clientY);
+            const run = this.screen.runAt(u, v);
+            if (run?.command) {
+                this.terminal.runTapped(run.command);
+                if (!touch) this.terminal.focus();
+                return;
+            }
             if (run?.action) {
                 run.action();
-                this.terminal.focus();
+                if (!touch) this.terminal.focus();
                 return;
             }
             if (run?.link) {
                 window.open(run.link, run.link.startsWith('mailto:') ? '_self' : '_blank', 'noopener');
                 return;
             }
-            this.terminal.focus();
+            if (!touch || this.screen.isInputRow(v)) this.terminal.focus();
+            else this.terminal.input.blur();
         });
 
         document.addEventListener('keydown', (e) => {

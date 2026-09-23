@@ -65,13 +65,14 @@ export function buildCommands(ctx) {
                     const out = ['', '<b>TUBES</b>', ''];
                     for (const key of THEME_ORDER) {
                         const mark = key === app.themeKey ? '<g>*</g>' : ' ';
-                        out.push(`  ${mark} <b>${key.padEnd(10)}</b><d>${THEMES[key].name}</d>`);
+                        const pad = ' '.repeat(Math.max(0, 10 - key.length));
+                        out.push(`  ${mark} <b><cmd run="theme ${key}">${key}</cmd></b>${pad}<d>${THEMES[key].name}</d>`);
                     }
                     out.push('', '<d>Usage: theme <name></d>', '');
                     return out;
                 }
                 const key = args[0].toLowerCase();
-                if (!THEMES[key]) return [`<r>theme: no such tube: ${args[0]}</r>`, '<d>Run `theme` to list them.</d>'];
+                if (!THEMES[key]) return [`<r>theme: no such tube: ${args[0]}</r>`, '<d>Run <cmd>theme</cmd> to list them.</d>'];
                 app.setTheme(key);
                 return [`<d>Warming up ${THEMES[key].name}...</d>`];
             },
@@ -92,7 +93,7 @@ export function buildCommands(ctx) {
                     let start = 0;
                     if (args[0]) {
                         start = BLOG.findIndex((p) => p.title === args[0]);
-                        if (start < 0) return [`<r>blog: no such post: ${args[0]}</r>`, '<d>Run `blog` to browse them.</d>'];
+                        if (start < 0) return [`<r>blog: no such post: ${args[0]}</r>`, '<d>Run <cmd>blog</cmd> to browse them.</d>'];
                     }
                     // naming a post goes straight to reading it; otherwise start in the post list
                     term.openPager(new Pager(term, BLOG, { start, sidebar: !args[0] }));
@@ -111,9 +112,13 @@ export function buildCommands(ctx) {
                 const node = lookup(path);
                 if (!node) return [`<r>ls: ${args[0]}: no such file or directory</r>`];
                 if (node.type === 'file') return [args[0]];
+                // a tapped entry lists or prints itself, so the paths are absolute whenever the listing is not of cwd
+                const base = args[0] ? path.replace(/\/$/, '') + '/' : '';
                 const out = [''];
                 for (const e of listing(node)) {
-                    out.push(e.isDir ? `  <b>${e.name}/</b>` : `  ${e.name}`);
+                    out.push(e.isDir
+                        ? `  <b><cmd run="ls ${base}${e.name}">${e.name}/</cmd></b>`
+                        : `  <cmd run="cat ${base}${e.name}">${e.name}</cmd>`);
                 }
                 out.push('');
                 return out;

@@ -295,6 +295,14 @@ export class Screen {
         return null;
     }
 
+    isInputRow(v) {
+        const y = v * this.cssHeight - this.originY;
+        if (this.view) return y >= (this.rows - 1.5) * this.cellH;
+        const { cursor } = this.layout();
+        if (!cursor || this.scrollOffset > 0) return false;
+        return y >= (cursor.row - this.viewTop() - 0.5) * this.cellH;
+    }
+
     // selection
 
     _rows() {

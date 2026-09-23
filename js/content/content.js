@@ -59,8 +59,8 @@ export const CRT_LOGO_ASCII = [
 
 // what visitors see first
 export const GREETING = [
-    '<d>Type <b>help</b> for a list of commands, or <b>about</b> to start.</d>',
-    '<d>Try <b>theme</b> to change the tube.</d>',
+    '<d>Type <b><cmd>help</cmd></b> for a list of commands, or <b><cmd>about</cmd></b> to start.</d>',
+    '<d>Try <b><cmd>theme</cmd></b> to change the tube.</d>',
     '',
 ];
 
@@ -151,18 +151,18 @@ const HELP = [
     '<y>COMMANDS</y>',
     '<d><hr></d>',
     '',
-    '  <b>about</b>       who I am',
-    '  <b>projects</b>    things I have made',
-    '  <b>skills</b>      what I work in',
-    '  <b>contact</b>     how to reach me',
-    '  <b>colophon</b>    licensing and sources',
-    '  <b>blog</b>        read the blog',
+    '  <b><cmd>about</cmd></b>       who I am',
+    '  <b><cmd>projects</cmd></b>    things I have made',
+    '  <b><cmd>skills</cmd></b>      what I work in',
+    '  <b><cmd>contact</cmd></b>     how to reach me',
+    '  <b><cmd>colophon</cmd></b>    licensing and sources',
+    '  <b><cmd>blog</cmd></b>        read the blog',
     '',
-    '  <b>theme</b> [name]  change the theme of the screen. <d>theme</d> alone lists them',
-    ...(SITE.settingsPanel !== false ? ['  <b>crt</b>         open the effects panel'] : []),
-    '  <b>ls / cd / cat / pwd / tree</b>   poke around the filesystem',
-    '  <b>neofetch</b>    system info',
-    '  <b>clear</b>       clear the terminal',
+    '  <b><cmd>theme</cmd></b> [name]  change the theme of the screen. <d>theme</d> alone lists them',
+    ...(SITE.settingsPanel !== false ? ['  <b><cmd>crt</cmd></b>         open the effects panel'] : []),
+    '  <b><cmd>ls</cmd> / cd / cat / <cmd>pwd</cmd> / <cmd>tree</cmd></b>   poke around the filesystem',
+    '  <b><cmd>neofetch</cmd></b>    system info',
+    '  <b><cmd>clear</cmd></b>       clear the terminal',
     '',
 ];
 

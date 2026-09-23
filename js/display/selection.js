@@ -29,11 +29,12 @@ export function bindSelection(app) {
         return screen.cellAt(u, v);
     };
 
-    const copySelection = async () => {
+    // on touch, focusing the input would raise the keyboard over what was just selected
+    const copySelection = async ({ focus = true } = {}) => {
         const text = screen.selectedText();
         if (!text.trim()) return;
         const ok = await writeClipboard(text);
-        app.terminal.focus();
+        if (focus) app.terminal.focus();
         screen.flash(ok ? `copied ${text.length} chars` : 'copy failed');
     };
 
@@ -109,7 +110,7 @@ export function bindSelection(app) {
         swallowClick = true;
         setTimeout(() => { swallowClick = false; }, 50);
         if (!touch) app.terminal.focus();
-        copySelection();
+        copySelection({ focus: !touch });
     };
     canvas.addEventListener('pointerup', release);
     canvas.addEventListener('pointercancel', release);
