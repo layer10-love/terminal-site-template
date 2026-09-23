@@ -56,7 +56,21 @@ class App {
         return [rect.width || window.innerWidth, rect.height || window.innerHeight];
     }
 
+    // soft keyboard fix
+    fitViewport() {
+        const vv = window.visualViewport;
+        const style = this.canvas.style;
+        // a pinch zoom shrinks the visual viewport too, and that should not reflow the screen
+        if (!vv || Math.abs(vv.scale - 1) > 0.01) {
+            style.top = style.height = '';
+            return;
+        }
+        style.top = `${vv.offsetTop}px`;
+        style.height = `${vv.height}px`;
+    }
+
     layout() {
+        this.fitViewport();
         const [cssW, cssH] = this.viewport();
 
         let renderScale = Math.min(3, Math.max(2, window.devicePixelRatio || 1));
@@ -154,9 +168,16 @@ class App {
 
     bindEvents() {
         let resizeTimer;
-        window.addEventListener('resize', () => {
+        const relayout = () => {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => this.layout(), 120);
+        };
+        window.addEventListener('resize', relayout);
+        window.visualViewport?.addEventListener('resize', relayout);
+        // iOS pans the visual viewport to reveal the focused input, only the position follows at once
+        // resizing the canvas before the next layout() would stretch the old frame
+        window.visualViewport?.addEventListener('scroll', () => {
+            if (this.canvas.style.top) this.canvas.style.top = `${window.visualViewport.offsetTop}px`;
         });
 
         this.canvas.addEventListener('wheel', (e) => {
