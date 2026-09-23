@@ -49,6 +49,7 @@ In monochrome themes, colors are displayed as a series of brightness steps inste
 | `js/display/text.js`    | markup parsing and line wrapping                           |
 | `js/display/themes.js`  | display profiles and the cell palette                      |
 | `js/display/banner.js`  | the block-letter banner font                               |
+| `js/display/touchscroll.js` | finger scrolling and flinging on touch screens      |
 | `js/shell/terminal.js`  | everything pertaining to the 'shell'                       |
 | `js/shell/commands.js`  | what each command does                                     |
 | `js/blog/pager.js`      | the full-screen blog reader                                |

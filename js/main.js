@@ -6,6 +6,7 @@ import { THEMES, FONTS } from './display/themes.js';
 import { FLAG_UNDERLINE } from './display/text.js';
 import { isBlogPath } from './blog/route.js';
 import { bindSelection } from './display/selection.js';
+import { bindTouchScroll } from './display/touchscroll.js';
 
 const STORAGE_KEY = 'crt.theme.v1';
 
@@ -145,6 +146,12 @@ class App {
 
     // input
 
+    // positive moves toward the end of the scrollback or the post
+    scrollLines(delta) {
+        if (this.terminal.pager) this.terminal.pager.scroll(delta);
+        else this.screen.scrollBy(-delta);
+    }
+
     bindEvents() {
         let resizeTimer;
         window.addEventListener('resize', () => {
@@ -154,8 +161,7 @@ class App {
 
         this.canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
-            if (this.terminal.pager) this.terminal.pager.scroll(Math.sign(e.deltaY) * 3);
-            else this.screen.scrollBy(Math.sign(e.deltaY) * -3);
+            this.scrollLines(Math.sign(e.deltaY) * 3);
         }, { passive: false });
 
         // we just send the cursor through the same barrel distort as the text
@@ -170,9 +176,13 @@ class App {
         });
 
         const selection = bindSelection(this);
+        const touchScroll = bindTouchScroll(this);
 
         this.canvas.addEventListener('click', (e) => {
-            if (selection.consumeClick()) return;
+            // both are asked, so neither flag outlives this click
+            const afterSelect = selection.consumeClick();
+            const afterScroll = touchScroll.consumeClick();
+            if (afterSelect || afterScroll) return;
             const run = runUnder(e);
             if (run?.action) {
                 run.action();
